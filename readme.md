@@ -12,3 +12,4 @@
 
 * Video - [Video](https://drive.google.com/file/d/1doL91-nGDQsIH_fxmUn9qmXUBQLKIg7q/view?usp=sharing)
 * Notebook for model - [Notebook](https://colab.research.google.com/drive/1B2785sIMGp-cXrsNYivhykYdau2tfR-6?usp=sharing)
+* Report final - [Report](https://drive.google.com/file/d/1H37gcWl5JTcG4hs_G68iNv72K3_7xQGd/view?usp=sharing)
