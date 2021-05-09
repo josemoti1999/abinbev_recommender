@@ -47,7 +47,7 @@
         <div class="row p-1">
             {% for i in range(6) %}
             <div class="col-2 p-2 d-flex justify-content-center">
-                <a href="/item_desc/{{user_code}}/{{cs_rec[i]}}">
+                <a href="/item_desc/{{user_code}}/{{cs_rec[i]}}" target='_blank'>
                 <figure>
                 <img title="{{ item }}" src="/static/item_images/{{cs_rec[i]%150}}.jpg" alt="HTML5 Icon" width="200" height="200"/>
                 <figcaption>{{cs_rec[i]}} with score {{"%.4f"|format(cs_rec_scores[i])}}</figcaption>
@@ -63,7 +63,7 @@
         <div class="row">
             {% for i in range([ph_rec|length,6]|min) %}
             <div class="col-2 p-2 d-flex justify-content-center">
-                <a href="{{ url_for('item_desc', item_code=ph_rec[i], user_code=user_code) }}">
+                <a href="{{ url_for('item_desc', item_code=ph_rec[i], user_code=user_code) }}" target='_blank'>
                 <figure>
                 <img title="{{ item }}" src="/static/item_images/{{ph_rec[i]%150}}.jpg" alt="HTML5 Icon" width="200" height="200"/>
                 <figcaption>{{ph_rec[i]}} with score {{"%.4f"|format(ph_rec_scores[i])}}</figcaption>
@@ -73,6 +73,42 @@
             {% endfor %}
         </div>
         {% endif %}
+
+
+        {% if pop_rec is defined %}
+        <h2>Recommendations based on Popularity:</h2>
+        <div class="row">
+            {% for i in range([pop_rec|length,6]|min) %}
+            <div class="col-2 p-2 d-flex justify-content-center">
+                <a href="{{ url_for('item_desc', item_code=pop_rec[i], user_code=user_code) }}" target='_blank'>
+                <figure>
+                <img title="{{ item }}" src="/static/item_images/{{pop_rec[i]%150}}.jpg" alt="HTML5 Icon" width="200" height="200"/>
+                <figcaption>{{pop_rec[i]}} with score {{"%.4f"|format(pop_rec_scores[i])}}</figcaption>
+                </figure>
+                </a>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+
+
+        {% if sim_rec is defined %}
+        <h2>Recommendations based on Popularity:</h2>
+        <div class="row">
+            {% for i in range([sim_rec|length,6]|min) %}
+            <div class="col-2 p-2 d-flex justify-content-center">
+                <a href="{{ url_for('item_desc', item_code=sim_rec[i], user_code=user_code) }}" target='_blank'>
+                <figure>
+                <img title="{{ item }}" src="/static/item_images/{{sim_rec[i]%150}}.jpg" alt="HTML5 Icon" width="200" height="200"/>
+                <figcaption>{{sim_rec[i]}} with score {{"%.4f"|format(sim_rec_scores[i])}}</figcaption>
+                </figure>
+                </a>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
     </div>
 </body>
 </html>

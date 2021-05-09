@@ -9,6 +9,7 @@ click==7.1.2
 cycler==0.10.0
 et-xmlfile==1.1.0
 Flask==1.1.2
+Flask-Ext==0.1
 flatbuffers==1.12
 gast==0.3.3
 google-auth==1.30.0

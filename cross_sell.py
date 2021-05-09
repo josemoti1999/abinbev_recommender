@@ -54,12 +54,34 @@ def preprocess():
             b['MACO/HL '] = -1
         df_new.append(b)
     df_new = pd.concat(df_new).sort_values(by=['Material','Order qty']).reset_index(drop=True)
-    os.makedirs('preprocessed_data/', exist_ok=True)
-    np.save('preprocessed_data/users_unique.npy',df_new['Ship-to nu'].unique())
-
     df_new = df_new[df_new['HL delivered']<200]
     df_new = df_new[df_new['delivery_flag']==1]
 
+
+    
+    os.makedirs('preprocessed_data/', exist_ok=True)
+    np.save('preprocessed_data/users_unique.npy',df_new['Ship-to nu'].unique())
+
+    df_fully_cleaned = df_new.dropna(how='any')
+    item_details = []
+    for a, b in df_fully_cleaned.groupby('Material'):
+        item = []
+        item.append(a)
+        item.append(b['Brand'].unique()[0])
+        item.append(b['Subrand'].unique()[0])
+        item.append(b['SEGMENTS : Pils / Spécialités / Superspécialités/Bouteille Young adult'].unique()[0])
+        item.append(b['Container Type'].unique()[0])
+        item.append(b['Container Size'].unique()[0])
+        item.append(b['Variétés'].unique()[0])
+        item.append(b['Segment LE'].unique()[0])
+        item_details.append(item)
+    item_details = pd.DataFrame(item_details, columns = ['item', 'brand', 'subrand', 'segments','cont_type','cont_size','varietes','segment_le'])
+    item_details.to_csv('preprocessed_data/item_details.csv',index=False)
+
+    popularity = df_new.groupby('Material')['Ship-to nu'].count().to_frame().reset_index(drop=False)
+    popularity.columns = ['item','user']
+    popularity.to_csv('preprocessed_data/popularity.csv',index=False)
+    
     df_new = df_new.sort_values(by=['Ship-to nu','Material'])
     temp = df_new.copy()
     enc1 = LabelEncoder()
