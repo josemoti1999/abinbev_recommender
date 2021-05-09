@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Recommendation</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <style>
+        img {
+          border: 1px solid rgb(197, 8, 8);
+          border-radius: 4px;
+        }
+        
+        img:hover {
+          box-shadow: 0 0 10px 10px rgba(19, 129, 65, 0.5);
+        }
+        figure img {
+            vertical-align: top;
+        }
+        figure figcaption {
+            text-align: center;
+        }
+        body {background-color: #403e41;}
+        </style>
+</head>
+<body>
+    <div class="p-3 text-white">
+        <div class="row">
+            <div class="col-10">
+				<h2><u>Why recommend item {{item_code}} to user {{user_code}}</u></h2>
+				{% if details is defined %}
+                {% for i in details %}
+				<li>{{ i }}</li>
+				{% endfor %}
+                {% endif %}
+            </div>
+			<div class="col-2">
+                {% if user_code is defined %}
+                <figure>
+                    <img title="{{ item }}" src="/static/item_images/avatar.png" alt="HTML5 Icon" width="200" height="200"/>
+                    <figcaption>User code: {{user_code}}</figcaption>
+                </figure>
+                {% endif %}
+            </div>
+		</div>
