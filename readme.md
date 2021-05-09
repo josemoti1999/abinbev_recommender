@@ -9,3 +9,6 @@
 * After that run --> **python3 app.py**
 * wait for a few seconds
 * Host the flask apk on local server
+
+* Video - [Video](https://drive.google.com/file/d/1doL91-nGDQsIH_fxmUn9qmXUBQLKIg7q/view?usp=sharing)
+* Notebook for model - [Notebook](https://colab.research.google.com/drive/1B2785sIMGp-cXrsNYivhykYdau2tfR-6?usp=sharing)
