@@ -109,6 +109,7 @@ def train():
     # training based on variational autoencoders
     # the best model is saved which is then retreived while predicting
     # for nmf the model fitting is done while predicting
+    start = time.time()
     train_full = pd.read_csv('preprocessed_data/train_full.csv')
     val_te = pd.read_csv('preprocessed_data/val_te.csv')
     input_shape = (ui.shape[1],)
@@ -153,6 +154,7 @@ def train():
     a,b = do_validation(final__, val_te)
     print('RMSE-->',a, ', RNDCG-->',b)
     print('PI for Combined Model-->', personalization_index(final__))
+    print(time.time()-start)
 
 
 def predict(u):
@@ -160,7 +162,6 @@ def predict(u):
     # using variational encoders doesnt give a boost in rmse and ndcg because
     # given dataset can be simply represented using linear nmf models
     u = int(u)
-    K = 10
     val_te = pd.read_csv('preprocessed_data/val_te.csv')
     input_shape = (ui.shape[1],)
     ui_full = ui[u,:].copy()
@@ -178,9 +179,9 @@ def predict(u):
     final__ = 0.1*pred_final + 0.9*ui_nmf_pred
     scores = final__[u,:]
     cs_scores = ui_mask*scores
-    cs_rec = np.argsort(cs_scores)[-K:][::-1]
+    cs_rec = np.argsort(cs_scores)[::-1]
     cs_rec_scores = cs_scores[cs_rec]
     ph_scores = ui_ph*ui_full
-    ph_rec = np.argsort(ph_scores)[-K:][::-1]
+    ph_rec = np.argsort(ph_scores)[::-1]
     ph_rec_scores = ph_scores[ph_rec]
     return cs_rec, cs_rec_scores, ph_rec, ph_rec_scores

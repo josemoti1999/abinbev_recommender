@@ -14,18 +14,26 @@ print('Preprocessing done')
 app = flask.Flask(__name__, template_folder='templates')
 app.secret_key = "super secret key"
 
+session = {}
+
 @app.route('/item_desc/<user_code>/<item_code>', methods=['GET','POST'])
 def item_desc(user_code,item_code):
     user_code = int(user_code)
     item_code = int(item_code)
     if flask.request.method == 'GET':
-        details = session['details'][str(item_code)]
-        
-        return flask.render_template('item_desc.html',user_code=user_code,item_code=item_code,details=details)
+        details = session['details'][item_code]
+        item_details = []
+        dict_ = get_item_details(item_code)
+        for key, val in dict_:
+            item_details.append(f'{key} of the item is/are {val}')
+        if len(item_details)==0:
+            item_details.append('Item details not given')
+        return flask.render_template('item_desc.html',user_code=user_code,item_code=item_code,details=details, item_details=item_details)
 
 @app.route('/', methods=['GET', 'POST'])
 def main():
     if flask.request.method == 'GET':
+        print('Getting main')
         session.clear()
         unique_users = list(np.sort(np.load('preprocessed_data/users_unique.npy').astype(int)))
         print(len(unique_users))
@@ -48,53 +56,35 @@ def main():
         cs_rec, ph_rec = enc2.inverse_transform(cs_rec), enc2.inverse_transform(ph_rec)
 
         pop_rec, pop_rec_scores = get_most_popular()
-        sim_rec = get_similar_items(ph_rec)
-        sim_rec, sim_rec_scores = zip(*(sim_rec)) 
+        sim_rec = get_similar_items(ph_rec[:10])
+        try:
+            sim_rec, sim_rec_scores = zip(*(sim_rec)) 
+        except:
+            sim_rec, sim_rec_scores = [],[]
 
         session['details'] = defaultdict(list)
-        seen = set()
 
         # cross selling recommendations
         for i,ele in enumerate(cs_rec):
-            if ele not in seen:
-                dict_ = get_item_details(ele)
-                for key, val in dict_:
-                    session['details'][int(ele)].append(f'1. {key} of the item is/are {val}')
-                seen.add(int(ele))
-            session['details'][int(ele)].append(f'2. This product has never been bought before.')
-            session['details'][int(ele)].append(f'3. Predicted rating score of {cs_rec_scores[i]} and is {i+1}th ranked among cross-selling opportunities product recommended')
+            session['details'][int(ele)].append(f'1. This product has never been bought before.')
+            session['details'][int(ele)].append(f'2. Predicted rating score of {cs_rec_scores[i]} and is {i+1}th ranked among cross-selling opportunities product recommended')
 
 
         # product history based recommenddations
         for i,ele in enumerate(ph_rec):
-            if ele not in seen:
-                dict_ = get_item_details(ele)
-                for key, val in dict_:
-                    session['details'][int(ele)].append(f'1. {key} of the item is/are {val}')
-                seen.add(int(ele))
-            session['details'][int(ele)].append(f'4. This product has been bought multiple times before')
-            session['details'][int(ele)].append(f'5. Has a rating score of {ph_rec_scores[i]} according to our rating algorithm and is {i+1}th ranked among the items bought till now')
+            session['details'][int(ele)].append(f'3. This product has been bought multiple times before')
+            session['details'][int(ele)].append(f'4. Has a rating score of {ph_rec_scores[i]} according to our rating algorithm and is {i+1}th ranked among the items bought till now')
 
         # overall popularity recommenddations
         for i,ele in enumerate(pop_rec):
-            if ele not in seen:
-                dict_ = get_item_details(ele)
-                for key, val in dict_:
-                    session['details'][int(ele)].append(f'1. {key} of the item is/are {val}')
-                seen.add(int(ele))
-            session['details'][int(ele)].append(f'4. This product has been bought by a lot of different users before')
-            session['details'][int(ele)].append(f'5. Has a rating score of {pop_rec_scores[i]} according to our rating algorithm and is {i+1}th ranked on the overall popularity')
+            session['details'][int(ele)].append(f'5. This product has been bought by a lot of different users before')
+            session['details'][int(ele)].append(f'6. Has a rating score of {pop_rec_scores[i]} according to our rating algorithm and is {i+1}th ranked on the overall popularity')
 
 
         # similar products based on previous purchased
         for i,ele in enumerate(sim_rec):
-            if ele not in seen:
-                dict_ = get_item_details(ele)
-                for key, val in dict_:
-                    session['details'][int(ele)].append(f'1. {key} of the item is/are {val}')
-                seen.add(int(ele))
-            session['details'][int(ele)].append(f'4. This product is a lot similar to some of the users favourite product')
-            session['details'][int(ele)].append(f'5. Has a rating score of {sim_rec_scores[i]} according to our rating algorithm and is {i+1}th ranked on the overall similarity rankings')
+            session['details'][int(ele)].append(f'7. This product is a lot similar to some of the users favourite product')
+            session['details'][int(ele)].append(f'8. Has a rating score of {sim_rec_scores[i]} according to our rating algorithm and is {i+1}th ranked on the overall similarity rankings')
 
 
 

@@ -22,18 +22,36 @@
         figure figcaption {
             text-align: center;
         }
-        body {background-color: #403e41;}
+        body {background-color: #d81212;}
+
+        .border {
+        border-right: 1px solid black;
+        }
         </style>
+
 </head>
 <body>
+    <h2><u>Why recommend item {{item_code}} to user {{user_code}}</u></h2>
     <div class="p-3 text-white">
         <div class="row">
-            <div class="col-10">
-				<h2><u>Why recommend item {{item_code}} to user {{user_code}}</u></h2>
-				{% if details is defined %}
-                {% for i in details %}
+            <div class="col-5 border">
+                <h3>Item details</h3>
+                {% if item_details is defined %}
+                <ul>
+                {% for i in item_details %}
+                <li>{{ i }}</li>
+                {% endfor %}
+                </ul>
+                {% endif %}
+            </div>
+            <div class="col-5 border">
+                <h3>User details</h3>
+				{% if item_details is defined %}
+                <ul>
+                {% for i in item_details %}
 				<li>{{ i }}</li>
 				{% endfor %}
+                </ul>
                 {% endif %}
             </div>
 			<div class="col-2">
@@ -45,3 +63,14 @@
                 {% endif %}
             </div>
 		</div>
+        <h3>Inferences</h3>
+        <div class="row">
+            {% if details is defined %}
+            <ul>
+            {% for i in details %}
+            <li>{{ i }}</li>
+            {% endfor %}
+            </ul>
+            {% endif %}
+		</div>
+    </div>

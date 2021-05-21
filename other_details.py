@@ -16,8 +16,8 @@ def get_item_details(item_code):
 def get_most_popular():
     popularity_df = pd.read_csv('preprocessed_data/popularity.csv').sort_values(by='user', ascending=False)
     popularity_df['scores'] = popularity_df['user']/(popularity_df['user'].max())
-    pop_rec = list(popularity_df.loc[:10,'item'].values)
-    pop_rec_scores = list(popularity_df.loc[:10,'scores'].values)
+    pop_rec = list(popularity_df.loc[:,'item'].values)
+    pop_rec_scores = list(popularity_df.loc[:,'scores'].values)
     return pop_rec, pop_rec_scores
 
 def get_similar_items(ph_rec):
@@ -40,6 +40,4 @@ def get_similar_items(ph_rec):
             if count!=0:
                 final.append((i,val/(n*count)))
     final.sort(key=lambda x:x[1], reverse=True)
-    return final[:10]
-
-
+    return final

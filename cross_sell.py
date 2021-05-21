@@ -17,13 +17,16 @@ from surprise import Dataset
 from surprise import Reader
 from surprise import accuracy
 from surprise.model_selection import cross_validate, train_test_split
+import time
 
 
 def preprocess():
     # does preprocessing and create training and validation datasets
-    df = pd.read_excel('Data.xlsx')
+    start = time.time()
+    df = pd.read_csv('Data_csv_file_utf.csv')
     df = df.drop(['Unnamed: 0'],axis=1)
-
+    print(time.time()-start)    #0.36
+    df['Doc. Date'] = pd.to_datetime(df['Doc. Date'])
     df['per_order'] = df['PCS delivered']/df['Order qty']
     df = df[df['Order qty'].apply(lambda x:False if int(x)!=x else True)]
 
@@ -61,8 +64,9 @@ def preprocess():
     
     os.makedirs('preprocessed_data/', exist_ok=True)
     np.save('preprocessed_data/users_unique.npy',df_new['Ship-to nu'].unique())
+    print(time.time()-start)    #1.57
 
-    df_fully_cleaned = df_new.dropna(how='any')
+    df_fully_cleaned = df_new.dropna(subset=['Brand'])
     item_details = []
     for a, b in df_fully_cleaned.groupby('Material'):
         item = []
@@ -94,6 +98,7 @@ def preprocess():
     x_enc = enc2.fit_transform(x)
     temp.loc[:,'Material'] = x_enc
     np.save('preprocessed_data/item_encoding.npy',enc2.classes_)
+    print(time.time()-start)    #1.69
 
     users = temp.groupby('Ship-to nu')['Material'].count().to_frame().reset_index()
     users['group'] = pd.qcut(users['Material'],18,labels=range(18))
@@ -104,20 +109,25 @@ def preprocess():
         users.loc[test_index,'fold'] = i
     user_items = pd.merge(temp[['Doc. Date','Material','Ship-to nu','HL delivered']], users[['Ship-to nu','fold']], how='left', on = 'Ship-to nu')
     user_items.columns = ['date','item','user','amount','fold']
+    print(time.time()-start)    #1.81
 
+    user_items = user_items.sort_values(by=['user','item','date'])
+    user_items['date_shift'] = user_items['date'].shift(-1)
     grouped = user_items.groupby(['user','item'])
     stack = []
     max_date = user_items['date'].max()
+    print(time.time()-start)    #1.85
     for a,b in grouped:
-        b = b.sort_values(by='date')
-        b['date_shift'] = b['date'].shift(-1)
-        b['date_shift'].fillna(max_date, inplace=True)
-        b['diff'] =  np.where((b['date_shift']-b['date']).dt.days>1,(b['date_shift']-b['date']).dt.days,1)
-        b.drop(labels=['date_shift'],axis=1, inplace=True)
+        b.loc[b.index[-1],'date_shift'] = max_date
         stack.append(b)
+    print(time.time()-start)    #12.4
     user_items = pd.concat(stack,axis=0)
+    user_items['diff'] =  (user_items['date_shift']-user_items['date']).dt.days
+    user_items['diff'].replace(0,1,inplace=True)
+    user_items.drop(labels=['date_shift'],axis=1, inplace=True)
     user_items['rating'] = user_items['amount']/user_items['diff']
     user_items = user_items.groupby(['user','item'])[['rating','fold']].mean().reset_index()
+    print(time.time()-start)    #16.5
 
     unique_users = len(user_items['user'].unique())
     unique_items = len(user_items['item'].unique())
@@ -133,6 +143,7 @@ def preprocess():
     val_tr = pd.concat(val_tr, axis=0).reset_index(drop=True)
     val_te = pd.concat(val_te, axis=0).reset_index(drop=True)
 
+    print(time.time()-start)    #16.6
     train_full = pd.concat([train_ui, val_tr], axis=0).reset_index(drop=True)
     temp = []
     train_min_max = []
@@ -170,5 +181,5 @@ def preprocess():
     val_te.to_csv('preprocessed_data/val_te.csv',index=False)
     np.save('preprocessed_data/ui.npy',ui)
     train_min_max.to_csv('preprocessed_data/train_min_max.csv')
-
+    print(time.time()-start)    #17.8
     return ui, train_min_max
