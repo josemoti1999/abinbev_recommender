@@ -1,17 +1,6 @@
 from cross_sell import *
 
-if not os.path.exists('preprocessed_data/train_min_max.csv'):
-    print('Preprocesssing')
-    ui, train_min_max = preprocess()
-
-else:
-    ui, train_min_max = np.load('preprocessed_data/ui.npy'), pd.read_csv('preprocessed_data/train_min_max.csv')
-n_items = ui.shape[-1]
-p_dims = [40,80,n_items]
-q_dims = p_dims[::-1]
-
-
-def model(input_shape):
+def model(input_shape, q_dims, p_dims):
     #Encoder 
     model_input=tf.keras.Input(input_shape)
     layer = tf.keras.layers.Dense(q_dims[1],activation='tanh')(model_input)
@@ -82,7 +71,7 @@ def do_validation(pred, val_te):
         ndcg += (dcg*idcg_)/(dcg_*idcg)
     return val_mse/val_te.shape[0], ndcg/len(val_te['user'].unique())
 
-def personalization_index(matrix):
+def personalization_index(matrix, ui):
     # 1 corresponds to a good personalization to everyone
     # 0 corresponds to same recommendations for everyone
     # variational encoders have a low personalization compared to nmf
@@ -105,17 +94,27 @@ def personalization_index(matrix):
         pi += len(a.intersection(b))/10
     return 1-(pi/(matrix.shape[0]-1))
 
-def train():
+def train(retrain=False):
     # training based on variational autoencoders
     # the best model is saved which is then retreived while predicting
     # for nmf the model fitting is done while predicting
     start = time.time()
+
+    if not os.path.exists('preprocessed_data/train_min_max.csv') or retrain==True:
+        print('Preprocesssing')
+        ui, train_min_max = preprocess(retrain)
+    else:
+        ui, train_min_max = np.load('preprocessed_data/ui.npy'), pd.read_csv('preprocessed_data/train_min_max.csv')
+    n_items = ui.shape[-1]
+    p_dims = [40,80,n_items]
+    q_dims = p_dims[::-1]
+
     train_full = pd.read_csv('preprocessed_data/train_full.csv')
     val_te = pd.read_csv('preprocessed_data/val_te.csv')
     input_shape = (ui.shape[1],)
     epochs = 200
     opt = tf.keras.optimizers.Adam(lr=0.001)
-    vae_model,_,_=model(input_shape)
+    vae_model,_,_=model(input_shape, q_dims, p_dims)
 
     best_rndcg = float('-inf')
     for i in range(epochs):
@@ -127,11 +126,13 @@ def train():
             best_rndcg = rndcg_val
             best_epoch = i    
             vae_model.save_weights('preprocessed_data/best_weights/')
-    final_model,_,_=model(input_shape)
+    final_model,_,_=model(input_shape,q_dims,p_dims)
     final_model.load_weights('preprocessed_data/best_weights/')
     pred_final = final_model.predict(ui)
-    print(do_validation(pred_final,val_te))
-    print(personalization_index(pred_final))
+    a,b = do_validation(pred_final,val_te)
+    print('For VAE based model:')
+    print('MSE-->',a, ', RNDCG-->',b)
+    print('PI-->',personalization_index(pred_final,ui))
 
     reader = Reader(rating_scale=(0, 1))
     data = Dataset.load_from_df(train_full[['user', 'item', 'rating']], reader)
@@ -141,20 +142,23 @@ def train():
     testset = testset.build_testset()
     algo = SVD(n_factors = 10, n_epochs=10)
     predictions = algo.fit(trainset).test(testset)
-    accuracy.mse(predictions)
+    #accuracy.mse(predictions)
     ui_nmf_pred = np.zeros((178,176))
     for u in range(178):
         for i in range(176):
             ui_nmf_pred[u][i] = algo.predict(u,i)[3]
     np.save('preprocessed_data/ui_nmf_pred.npy',ui_nmf_pred)
-    print(do_validation(ui_nmf_pred, val_te))
-    print(personalization_index(ui_nmf_pred))
+    a,b = do_validation(ui_nmf_pred,val_te)
+    print('For NMF based model:')
+    print('MSE-->',a, ', RNDCG-->',b)
+    print('PI-->',personalization_index(ui_nmf_pred,ui))
 
     final__ = 0.1*pred_final + 0.9*ui_nmf_pred
     a,b = do_validation(final__, val_te)
-    print('RMSE-->',a, ', RNDCG-->',b)
-    print('PI for Combined Model-->', personalization_index(final__))
-    print(time.time()-start)
+    print('For combined model')
+    print('MSE-->',a, ', RNDCG-->',b)
+    print('PI-->', personalization_index(final__,ui))
+    print('Time to complete-->',time.time()-start)
 
 
 def predict(u):
@@ -162,6 +166,10 @@ def predict(u):
     # using variational encoders doesnt give a boost in rmse and ndcg because
     # given dataset can be simply represented using linear nmf models
     u = int(u)
+    ui = np.load('preprocessed_data/ui.npy')
+    n_items = ui.shape[-1]
+    p_dims = [40,80,n_items]
+    q_dims = p_dims[::-1]
     val_te = pd.read_csv('preprocessed_data/val_te.csv')
     input_shape = (ui.shape[1],)
     ui_full = ui[u,:].copy()
@@ -169,7 +177,7 @@ def predict(u):
         ui_full[int(row['item'])] = row['rating']
     ui_mask = np.where(ui_full==-1,1,0)
     ui_ph = np.where(ui_full==-1,0,1)
-    final_model,_,_=model(input_shape)
+    final_model,_,_=model(input_shape,q_dims,p_dims)
     final_model.load_weights('preprocessed_data/best_weights/')
     pred_final = final_model.predict(ui)
 
@@ -179,9 +187,11 @@ def predict(u):
     final__ = 0.1*pred_final + 0.9*ui_nmf_pred
     scores = final__[u,:]
     cs_scores = ui_mask*scores
-    cs_rec = np.argsort(cs_scores)[::-1]
+    temp = cs_scores[cs_scores>0]
+    cs_rec = np.argsort(cs_scores)[::-1][:temp.shape[0]]
     cs_rec_scores = cs_scores[cs_rec]
     ph_scores = ui_ph*ui_full
-    ph_rec = np.argsort(ph_scores)[::-1]
+    temp = ph_scores[ph_scores>0]
+    ph_rec = np.argsort(ph_scores)[::-1][:temp.shape[0]]
     ph_rec_scores = ph_scores[ph_rec]
     return cs_rec, cs_rec_scores, ph_rec, ph_rec_scores

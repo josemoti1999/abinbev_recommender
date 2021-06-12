@@ -1,17 +1,32 @@
 import pandas as pd
 
-def get_item_details(item_code):
+def get_item_user_details(item_code, user_code):
     item_details = pd.read_csv('preprocessed_data/item_details.csv').set_index('item')
+    user_details = pd.read_csv('preprocessed_data/user_details.csv').set_index('user')
     if item_code in item_details.index:
-        dict_ = [['Brand',item_details.loc[item_code,'brand']],
+        dict_1 = [['Brand',item_details.loc[item_code,'brand']],
         ['Subrand',item_details.loc[item_code,'subrand']],
         ['SEGMENTS : Pils / Spécialités / Superspécialités/Bouteille ',item_details.loc[item_code,'segments']],
         ['Container Type',item_details.loc[item_code,'cont_type']],
-        ['Variétés',item_details.loc[item_code,'cont_size']],
-        ['Segment LE',item_details.loc[item_code,'segment_le']]]
-        return dict_
+        ['Container Size',item_details.loc[item_code,'cont_size']],
+        ['Variétés',item_details.loc[item_code,'varietes']],
+        ['Segment LE',item_details.loc[item_code,'segment_le']],
+        ['Degree Alcohol',item_details.loc[item_code,'degree_alc']],
+        ]
     else:
-        return []
+        dict_1 = []
+    if user_code in user_details.index:
+        dict_2 = [['Groupement',user_details.loc[user_code,'groupement']],
+        ['Postal Code',user_details.loc[user_code,'postal_code']],
+        ['Street',user_details.loc[user_code,'street']],
+        ['Sous groupement',user_details.loc[user_code,'Sous_groupement']],
+        ['M2_Territory_ID',user_details.loc[user_code,'m2_id']],
+        ['M1_Territory_ID',user_details.loc[user_code,'m1_id']],
+        ['Dépt',user_details.loc[user_code,'dept']],
+        ]
+    else:
+        dict_2 = []
+    return dict_1, dict_2
 
 def get_most_popular():
     popularity_df = pd.read_csv('preprocessed_data/popularity.csv').sort_values(by='user', ascending=False)

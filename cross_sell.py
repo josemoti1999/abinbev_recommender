@@ -18,17 +18,28 @@ from surprise import Reader
 from surprise import accuracy
 from surprise.model_selection import cross_validate, train_test_split
 import time
+from csv import writer
+import random
+random.seed(0)
 
 
-def preprocess():
+def preprocess(retrain):
+
     # does preprocessing and create training and validation datasets
     start = time.time()
-    df = pd.read_csv('Data_csv_file_utf.csv')
+    df = pd.read_csv('Data_orig.csv')
     df = df.drop(['Unnamed: 0'],axis=1)
-    print(time.time()-start)    #0.36
+    if retrain==True:
+        df_additional = pd.read_csv('Data_additional.csv')
+        print('Adding new sales')
+        df = pd.concat([df,df_additional], axis=0, ignore_index=True)
     df['Doc. Date'] = pd.to_datetime(df['Doc. Date'])
+    df['Order qty'].fillna(1, inplace=True)
+    df['delivery_flag'].fillna(1, inplace=True)
+    df['PCS delivered'].fillna(20, inplace=True)
     df['per_order'] = df['PCS delivered']/df['Order qty']
     df = df[df['Order qty'].apply(lambda x:False if int(x)!=x else True)]
+    print(time.time()-start)    #0.44
 
     df_new = []
     grouped = df.groupby('Material')
@@ -44,29 +55,51 @@ def preprocess():
             val = 16.66667
         b['hl_ratio'].replace(float('inf'),np.nan, inplace=True)
         b['hl_ratio'].fillna(val)
-        b['HL delivered'] = b['PCS delivered']/val
-        try:
-            val2 = b['TTC'].dropna().unique()[0]
-            b['TTC'] = val2
-        except:
-            b['TTC'] = -1
-        try:
-            val2 = b['MACO/HL '].dropna().unique()[0]
-            b['MACO/HL '] = val2
-        except:
-            b['MACO/HL '] = -1
+        b.loc[b['HL delivered']==0,'HL delivered'] = b['PCS delivered']/val
+        item_feats = ['MACO/HL ','Brand','Subrand','SEGMENTS : Pils / Spécialités / Superspécialités/Bouteille Young adult','Container Type','Container Size','Variétés','Segment LE','Degre Alc']
+        for col_val in item_feats:
+            try:
+                val2 = b[col_val].dropna().unique()[0]
+                b[col_val] = val2
+            except:
+                pass
         df_new.append(b)
     df_new = pd.concat(df_new).sort_values(by=['Material','Order qty']).reset_index(drop=True)
+    temp = []
+    grouped = df_new.groupby('Ship-to nu')
+    for a,b in grouped:
+        user_feats = ['Groupement','Postal Code','Street','Sous groupement','M2_Territory_ID','M1_Territory_ID','Dépt']
+        for col_val in user_feats:
+            try:
+                val2 = b[col_val].dropna().unique()[0]
+                b[col_val] = val2
+            except:
+                pass
+        temp.append(b)
+    df_new = pd.concat(temp).sort_values(by=['Material','Order qty']).reset_index(drop=True)
     df_new = df_new[df_new['HL delivered']<200]
     df_new = df_new[df_new['delivery_flag']==1]
-
-
-    
     os.makedirs('preprocessed_data/', exist_ok=True)
     np.save('preprocessed_data/users_unique.npy',df_new['Ship-to nu'].unique())
-    print(time.time()-start)    #1.57
+    np.save('preprocessed_data/items_unique.npy',df_new['Material'].unique())
+    print(time.time()-start)    #2.56
 
-    df_fully_cleaned = df_new.dropna(subset=['Brand'])
+    cost_df = df_new.dropna(subset=item_feats[1:],how='any')
+    gd = cost_df.groupby('Material')
+    cost_sr = gd['MACO/HL '].mean()
+    cost_df = pd.DataFrame(cost_sr)
+    num_min = cost_df['MACO/HL '].min()
+    num_max = cost_df['MACO/HL '].max()
+    def cost(x):
+        if not type(x) == 'int':
+            return random.uniform(num_min, num_max)
+    cost_df['MACO/HL '] = cost_df['MACO/HL '].apply(lambda x: cost(x))
+    cost_df.to_csv('preprocessed_data/cost.csv')
+
+
+
+    # checkpoints for training and predicting process
+    df_fully_cleaned = df_new.dropna(subset=item_feats[1:],how='any')
     item_details = []
     for a, b in df_fully_cleaned.groupby('Material'):
         item = []
@@ -78,14 +111,29 @@ def preprocess():
         item.append(b['Container Size'].unique()[0])
         item.append(b['Variétés'].unique()[0])
         item.append(b['Segment LE'].unique()[0])
+        item.append(b['Degre Alc'].unique()[0])
         item_details.append(item)
-    item_details = pd.DataFrame(item_details, columns = ['item', 'brand', 'subrand', 'segments','cont_type','cont_size','varietes','segment_le'])
+    item_details = pd.DataFrame(item_details, columns = ['item', 'brand', 'subrand', 'segments','cont_type','cont_size','varietes','segment_le','degree_alc'])
     item_details.to_csv('preprocessed_data/item_details.csv',index=False)
+
+    df_fully_cleaned = df_new.dropna(subset=user_feats,how='any')
+    user_details = []
+    for a, b in df_fully_cleaned.groupby('Ship-to nu'):
+        user = []
+        user.append(a)
+        for f in user_feats:
+            user.append(b[f].unique()[0])
+        user_details.append(user)
+    user_details = pd.DataFrame(user_details, columns = ['user','groupement','postal_code','street','Sous_groupement','m2_id','m1_id','dept'])
+    user_details.to_csv('preprocessed_data/user_details.csv',index=False)
 
     popularity = df_new.groupby('Material')['Ship-to nu'].count().to_frame().reset_index(drop=False)
     popularity.columns = ['item','user']
     popularity.to_csv('preprocessed_data/popularity.csv',index=False)
-    
+    print(time.time()-start)    #2.65
+
+
+
     df_new = df_new.sort_values(by=['Ship-to nu','Material'])
     temp = df_new.copy()
     enc1 = LabelEncoder()
@@ -98,7 +146,6 @@ def preprocess():
     x_enc = enc2.fit_transform(x)
     temp.loc[:,'Material'] = x_enc
     np.save('preprocessed_data/item_encoding.npy',enc2.classes_)
-    print(time.time()-start)    #1.69
 
     users = temp.groupby('Ship-to nu')['Material'].count().to_frame().reset_index()
     users['group'] = pd.qcut(users['Material'],18,labels=range(18))
@@ -109,25 +156,24 @@ def preprocess():
         users.loc[test_index,'fold'] = i
     user_items = pd.merge(temp[['Doc. Date','Material','Ship-to nu','HL delivered']], users[['Ship-to nu','fold']], how='left', on = 'Ship-to nu')
     user_items.columns = ['date','item','user','amount','fold']
-    print(time.time()-start)    #1.81
+    print(time.time()-start)    #2.707
+
 
     user_items = user_items.sort_values(by=['user','item','date'])
     user_items['date_shift'] = user_items['date'].shift(-1)
     grouped = user_items.groupby(['user','item'])
     stack = []
     max_date = user_items['date'].max()
-    print(time.time()-start)    #1.85
     for a,b in grouped:
         b.loc[b.index[-1],'date_shift'] = max_date
         stack.append(b)
-    print(time.time()-start)    #12.4
     user_items = pd.concat(stack,axis=0)
     user_items['diff'] =  (user_items['date_shift']-user_items['date']).dt.days
     user_items['diff'].replace(0,1,inplace=True)
     user_items.drop(labels=['date_shift'],axis=1, inplace=True)
     user_items['rating'] = user_items['amount']/user_items['diff']
     user_items = user_items.groupby(['user','item'])[['rating','fold']].mean().reset_index()
-    print(time.time()-start)    #16.5
+    print(time.time()-start)    #7.809
 
     unique_users = len(user_items['user'].unique())
     unique_items = len(user_items['item'].unique())
@@ -142,8 +188,8 @@ def preprocess():
         val_tr.append(b.loc[max_i:,:])
     val_tr = pd.concat(val_tr, axis=0).reset_index(drop=True)
     val_te = pd.concat(val_te, axis=0).reset_index(drop=True)
+    print(time.time()-start)    #7.827
 
-    print(time.time()-start)    #16.6
     train_full = pd.concat([train_ui, val_tr], axis=0).reset_index(drop=True)
     temp = []
     train_min_max = []
@@ -181,5 +227,6 @@ def preprocess():
     val_te.to_csv('preprocessed_data/val_te.csv',index=False)
     np.save('preprocessed_data/ui.npy',ui)
     train_min_max.to_csv('preprocessed_data/train_min_max.csv')
-    print(time.time()-start)    #17.8
+    print(time.time()-start)    #8.444
+    print('Preprocessing done')
     return ui, train_min_max

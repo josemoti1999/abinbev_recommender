@@ -491,13 +491,38 @@ figure {
                   {% endfor %}
               </select>
           </div>
-          <input type="submit" class="btn btn-dark" value="Recommend"/>
+          <input type="hidden" name="btn_identifier" value="recommender"/>
+          <input type="submit" class="btn btn-dark" name="action" value="Recommend">
         </form>
         <p style="color: #919191; padding: 1em;">This model uses <b>Collaborative Filtering</b> to find similar items. 
             Intuitive idea behind is to find similar users and recommend products that one has bought 
                 and the other has not. </p>
-
         <br>
+        {% if flash_retrain %}
+        <p style="color:rgb(223, 11, 11)" align="center">*Retraining complete.</p>
+        {% endif %}
+        <div class='row'>
+        <div class='col-4'></div>
+        <div class='col-2'>
+        <form method='post'>
+        <input type="hidden" name="btn_identifier" value="retrainer"/>
+        <input type="submit" class="btn btn-danger btn-lg btn-block" name="action" value="Retrain"> 
+        </form>
+        </div>
+        <div class='col-2'>
+        <form method='post'>
+        <input type="hidden" name="btn_identifier" value="adder"/>
+        <input type="submit" class="btn btn-success btn-lg btn-block" name="action" value="Add Sales">
+        </form>
+        </div>
+        <div class='col-4'></div>
+        </div>
+        {% if new_sale_count==0 %}
+        <p style="color: #919191; padding: 1em;">0 new sales. Retraining not required.</p>
+        {% endif %}
+        {% if new_sale_count>0 %}
+        <p style="color: #919191; padding: 1em;">{{new_sale_count}} new sales added. Retrain for better results.</p>
+        {% endif %}
   </div>
 <!-- partial -->
   <script src='https://cdn.jsdelivr.net/npm/jquery@2.2.4/dist/jquery.min.js'></script>

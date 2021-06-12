@@ -31,6 +31,7 @@
     <div class="p-3 text-white">
         <div class="row">
             <div class="col-10" style='background: url(/static/item_images/background.jpg); background-size: 1150px 200px;'>
+            <a href={{ url_for('main') }} class="btn btn-dark btn-lg active" role="button" aria-pressed="true">Home</a>
             </div>
             <div class="col-2">
                 {% if user_code is defined %}
@@ -57,6 +58,25 @@
             {% endfor %}
         </div>
         {% endif %}
+
+
+        {% if up_rec is defined %}
+        <h2>Up Sell recommendations:</h2>
+        <div class="row">
+            {% for i in range([up_rec|length,6]|min) %}
+            <div class="col-2 p-2 d-flex justify-content-center">
+                <a href="{{ url_for('item_desc', item_code=up_rec[i], user_code=user_code) }}" target='_blank'>
+                <figure>
+                <img title="{{ item }}" src="/static/item_images/{{up_rec[i]%150}}.jpg" alt="HTML5 Icon" width="200" height="200"/>
+                <figcaption>{{up_rec[i]}} with score {{"%.4f"|format(up_rec_scores[i])}}</figcaption>
+                </figure>
+                </a>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+
 
         {% if ph_rec is defined %}
         <h2>Recommendations based on User History:</h2>
@@ -94,7 +114,7 @@
 
 
         {% if sim_rec is defined %}
-        <h2>Recommendations based on similar products to previously purchased:</h2>
+        <h2>Content based recommendations:</h2>
         <div class="row">
             {% for i in range([sim_rec|length,6]|min) %}
             <div class="col-2 p-2 d-flex justify-content-center">

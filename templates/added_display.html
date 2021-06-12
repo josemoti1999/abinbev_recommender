@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Recommendation</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <style>
+        img {
+          border: 1px solid rgb(197, 8, 8);
+          border-radius: 4px;
+        }
+        
+        img:hover {
+          box-shadow: 0 0 10px 10px rgba(19, 129, 65, 0.5);
+        }
+        figure img {
+            vertical-align: top;
+        }
+        figure figcaption {
+            text-align: center;
+        }
+        body {background-color: #d81212;}
+
+        .border {
+        border-right: 1px solid black;
+        }
+        </style>
+
+</head>
+<body>
+<a href={{ url_for('main') }} class="btn btn-dark btn-lg active" role="button" aria-pressed="true">Home</a>
+<div class='row'>
+<div class="col-4"></div>
+<div class="col-4">
+    {% if post_bool %}
+    <p style="color:black">*Sale successfully entered. Enter another sale.</p>
+    {% endif %}
+    <form method="post">
+        <div class="form-group">
+            <label for="sel1">Date today:</label>
+            <select class="form-control" id="sel1" name="date_today">
+                <option>{{ date_today }}</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="sel1">User_code:</label>
+            <select class="form-control" id="sel1" name="user_code">
+                {% for user_code in user_code_list %}
+                <option>{{ user_code }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="sel1">Item_code:</label>
+            <select class="form-control" id="sel1" name="item_code">
+                {% for item_code in item_code_list %}
+                <option>{{ item_code }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="sel1">HL bought (between 0.06 and 200):</label>
+            <input type="text" class="form-control" id="sel1", name="hl">
+        </div>
+        <button type="submit" class="btn btn-primary">Add</button>
+      </form>
+</div>
+</div>
+</body>
